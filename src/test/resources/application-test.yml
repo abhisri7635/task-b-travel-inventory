@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:data/test-navan.db
+    hikari:
+      maximum-pool-size: 10
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  # Jackson config is inherited from application.yml (merged per-key by Spring Boot).
+
+logging:
+  level:
+    # Expected contention noise in ConcurrencyTest — these exceptions are handled.
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: 'OFF'

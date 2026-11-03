@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:data/navan.db
+    hikari:
+      maximum-pool-size: 5
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      use-big-decimal-for-floats: true      # money never touches IEEE double
+      fail-on-unknown-properties: false
+    serialization:
+      write-bigdecimal-as-plain: true        # "250.00", not "2.5E+2"
+      write-dates-as-timestamps: false       # ISO-8601 strings, not epoch millis
+
+server:
+  port: 8080
+
+logging:
+  level:
+    # Duplicate external_id (UNIQUE) and SQLITE_BUSY under write contention are caught
+    # and translated to proper HTTP responses (409 / retry), so Hibernate's ERROR echo
+    # of these handled exceptions is misleading noise. Genuine failures still surface
+    # as 500s via the service layer.
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: 'OFF'
