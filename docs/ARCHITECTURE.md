@@ -28,32 +28,32 @@ Three properties drive the whole design:
 
 ```mermaid
 flowchart TD
-    Client[HTTP Client] -->|JSON| C
+    Client["HTTP Client"] -->|JSON| C
 
     subgraph Web["Web layer"]
-        C[Controllers<br/>Transaction / Invoice]
-        GEH[GlobalExceptionHandler<br/>@RestControllerAdvice]
+        C["Controllers: Transaction / Invoice"]
+        GEH["GlobalExceptionHandler (RestControllerAdvice)"]
     end
 
     subgraph Service["Service layer"]
-        TS[TransactionService]
-        IS[InvoiceService]
-        SB[SnapshotBuilder<br/>pure function]
-        MV[MetadataValidator<br/>polymorphic dispatch]
+        TS["TransactionService"]
+        IS["InvoiceService"]
+        SB["SnapshotBuilder (pure function)"]
+        MV["MetadataValidator (polymorphic dispatch)"]
     end
 
-    subgraph Map["Mapping layer"]
-        TM[TransactionMapper]
-        IM[InvoiceMapper]
+    subgraph Mapping["Mapping layer"]
+        TM["TransactionMapper"]
+        IM["InvoiceMapper"]
     end
 
     subgraph Data["Persistence layer"]
-        TR[TransactionRepository]
-        IR[InvoiceRepository]
-        ILR[InvoiceLineRepository]
+        TR["TransactionRepository"]
+        IR["InvoiceRepository"]
+        ILR["InvoiceLineRepository"]
     end
 
-    DB[(SQLite<br/>WAL mode)]
+    DB[("SQLite (WAL mode)")]
 
     C --> TS & IS
     C -.throws.-> GEH
@@ -90,8 +90,8 @@ testable.
 | JSON | Jackson | Metadata & snapshot (de)serialization |
 | Health/metrics | Spring Boot Actuator | `/actuator/health` |
 
-SQLite is the right call for a self-contained take-home. The two SQLite-specific
-accommodations (see §4.3 and §5.2) would be dropped on Postgres in production.
+SQLite is the right call for a self-contained take-home. The SQLite-specific
+accommodations (see §4.2 and §4.3) would be dropped on Postgres in production.
 
 ### 1.5 Primary request flows
 
@@ -308,7 +308,7 @@ Both list endpoints require `limit` (default 50, **max 100** → `400` above tha
 > Current implementation is **offset** pagination. The `(created_at, id)` index is
 > deliberately in place so this can switch to **keyset**
 > (`WHERE (created_at, id) < (?, ?)`) without a schema change when deep offsets
-> become a cost — see §5.1.
+> become a cost.
 
 ### 2.9 Error handling
 
@@ -509,17 +509,3 @@ first:
 4. **Single-writer contention (SQLite-specific)** — SQLite serializes writers.
    *Mitigation here:* WAL + `busy_timeout`. *Mitigation in production:* this is the
    first reason to move to Postgres, which gives real MVCC and row-level locking.
-
-### 5.1 Known next step: offset → keyset pagination
-
-Offset pagination still scans and discards the skipped rows, so page _N_ gets linearly
-more expensive. Because the ordering index is already `(created_at, id)`, switching to
-keyset (`WHERE (created_at, id) < (:lastCreatedAt, :lastId) ORDER BY created_at DESC,
-id DESC LIMIT :limit`) is a query-only change — no migration.
-
-### 5.2 Production deltas (out of scope, but these are the honest edges)
-
-- **Database:** Postgres instead of SQLite (removes §4.3 broad catch and §4.2 WAL
-  workaround; real MVCC).
-- **Optimistic locking:** add `@Version` to guard concurrent PATCH last-write-wins.
-- **Keyset pagination** as above.
