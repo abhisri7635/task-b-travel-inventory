@@ -248,14 +248,7 @@ curl -s -X DELETE http://localhost:8080/invoices/<id> -w "%{http_code}"
 
 ---
 
-## Design summary
+## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture — HLD +
-LLD, data model, schema, indexes, concurrency, and high volume.
-
-- **Money:** `BigDecimal` scale 2 at the edge; stored as `long` minor units (cents) in SQLite.
-- **Duplicate external_id:** DB `UNIQUE(external_id)`; the insert is attempted and, on failure, if a row with that `external_id` now exists it is resolved to **409** with `existing_id`. (Hibernate's community SQLite dialect surfaces a UNIQUE violation as `JpaSystemException` rather than `DataIntegrityViolationException`, so the conflict is detected by the follow-up read rather than by exception type.)
-- **Invoice snapshot:** copied into `invoice_lines.snapshot_json` at create time; never a live join back to `transactions`.
-- **Freeze rules:** PATCH/DELETE of a billed transaction → **409** via `invoiceLineRepository.existsBySourceTransactionId`.
-- **Pagination:** `limit` (default 50, max 100; `>100` → **400**), `offset`, `LIMIT`-bounded SQL.
-- **Indexes:** `UNIQUE(external_id)`, `ix_invoice_lines_txn(source_transaction_id)`, and an ordered `(created_at, id)` index (offset pagination today, keyset-ready).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture — HLD + LLD,
+data model, schema, indexes, concurrency, and high volume.
